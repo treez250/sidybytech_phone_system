@@ -1,0 +1,7 @@
+# Server Output Log
+# Paste your terminal output here for troubleshooting
+
+## Latest Output:
+[Paste your output below this line]
+
+

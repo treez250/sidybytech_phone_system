@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y \
     kamailio-websocket-modules \
     kamailio-json-modules \
     kamailio-utils-modules \
-    mysql-client \
+    default-mysql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Create directories
