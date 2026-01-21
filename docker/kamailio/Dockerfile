@@ -18,7 +18,6 @@ RUN mkdir -p /etc/kamailio /var/run/kamailio
 
 # Copy configuration
 COPY kamailio.cfg /etc/kamailio/
-COPY kamctlrc /etc/kamailio/
 
 # Expose ports
 EXPOSE 5080/udp 5080/tcp
