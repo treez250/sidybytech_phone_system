@@ -21,6 +21,12 @@ echo "📦 Updating system packages..."
 apt update
 apt upgrade -y
 
+# Install curl first if needed
+if ! command -v curl &> /dev/null; then
+    echo "📦 Installing curl..."
+    apt install -y curl
+fi
+
 # Install Docker if not present
 if ! command -v docker &> /dev/null; then
     echo "📦 Installing Docker..."
