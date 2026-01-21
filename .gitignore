@@ -1,0 +1,57 @@
+# Environment variables
+.env
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# Database
+*.sql.gz
+*.sql.bak
+
+# Docker volumes
+volumes/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# SSL certificates and keys
+*.key
+*.crt
+*.pem
+*.p12
+*.pfx
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Node modules (if using any Node.js tools)
+node_modules/
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+venv/
+env/
+
+# Sensitive data
+secrets/
+credentials/

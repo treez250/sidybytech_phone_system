@@ -1,0 +1,66 @@
+groups:
+  - name: carrier_alerts
+    interval: 30s
+    rules:
+      - alert: HighCallFailureRate
+        expr: (rate(asterisk_calls_failed[5m]) / rate(asterisk_calls_total[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High call failure rate detected"
+          description: "Call failure rate is {{ $value | humanizePercentage }}"
+
+      - alert: TrunkDown
+        expr: asterisk_trunk_status == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Trunk {{ $labels.trunk }} is down"
+          description: "SIP trunk has been unavailable for 2 minutes"
+
+      - alert: HighCPUUsage
+        expr: node_cpu_usage > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is {{ $value }}%"
+
+      - alert: LowDiskSpace
+        expr: node_filesystem_avail_bytes / node_filesystem_size_bytes < 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low disk space on {{ $labels.instance }}"
+          description: "Only {{ $value | humanizePercentage }} disk space remaining"
+
+      - alert: DatabaseConnectionPoolExhausted
+        expr: mysql_global_status_threads_connected / mysql_global_variables_max_connections > 0.8
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database connection pool nearly exhausted"
+          description: "{{ $value | humanizePercentage }} of connections in use"
+
+      - alert: HighMemoryUsage
+        expr: node_memory_usage > 90
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is {{ $value }}%"
+
+      - alert: AsteriskDown
+        expr: up{job="asterisk"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Asterisk service is down"
+          description: "Asterisk has been down for 1 minute"
