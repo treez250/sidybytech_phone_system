@@ -75,41 +75,36 @@ services:
     cap_add:
       - NET_ADMIN
 
-  # Kamailio SIP Proxy
-  kamailio:
-    build: ./docker/kamailio
-    container_name: pbx-kamailio
-    restart: unless-stopped
-    ports:
-      - "5080:5080/udp"
-      - "5080:5080/tcp"
-    environment:
-      - ASTERISK_HOST=freepbx
-      - DB_HOST=mariadb
-      - DB_USER=kamailiouser
-      - DB_PASS=${KAMAILIO_DB_PASSWORD}
-    volumes:
-      - ./config/kamailio:/etc/kamailio
-    networks:
-      - pbx-network
-    depends_on:
-      - mariadb
-      - freepbx
+  # Kamailio and RTPEngine disabled for initial setup
+  # Uncomment these after basic system is working
+  
+  # kamailio:
+  #   build: ./docker/kamailio
+  #   container_name: pbx-kamailio
+  #   restart: unless-stopped
+  #   ports:
+  #     - "5080:5080/udp"
+  #     - "5080:5080/tcp"
+  #   environment:
+  #     - ASTERISK_HOST=freepbx
+  #     - DB_HOST=mariadb
+  #   volumes:
+  #     - ./config/kamailio:/etc/kamailio
+  #   networks:
+  #     - pbx-network
+  #   depends_on:
+  #     - mariadb
+  #     - freepbx
 
-  # RTPEngine Media Proxy
-  rtpengine:
-    build: ./docker/rtpengine
-    container_name: pbx-rtpengine
-    restart: unless-stopped
-    network_mode: host
-    environment:
-      - LISTEN_UDP=12222
-      - PORT_MIN=20000
-      - PORT_MAX=30000
-    volumes:
-      - ./config/rtpengine:/etc/rtpengine
-    cap_add:
-      - NET_ADMIN
+  # rtpengine:
+  #   build: ./docker/rtpengine
+  #   container_name: pbx-rtpengine
+  #   restart: unless-stopped
+  #   network_mode: host
+  #   volumes:
+  #     - ./config/rtpengine:/etc/rtpengine
+  #   cap_add:
+  #     - NET_ADMIN
 
   # Prometheus Monitoring
   prometheus:
