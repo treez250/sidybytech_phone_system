@@ -1,238 +1,241 @@
-# Cheapest Deployment Guide
+# Cheap Cloud Deployment Options for FreePBX Carrier System
 
-## Budget Options (Ranked by Cost)
+## 💰 Cost Breakdown (Monthly)
 
-### Option 1: Ultra Budget - $5-10/month
-**Provider:** DigitalOcean, Vultr, or Linode
-- **Specs:** 2GB RAM, 1 CPU, 50GB SSD
-- **Cost:** $6-12/month
-- **Capacity:** 5-10 simultaneous calls
-- **Best for:** Testing, small office
+### Option 1: DigitalOcean (RECOMMENDED - Easiest)
+**$24/month total**
+- **Droplet**: $18/month (4GB RAM, 2 vCPU, 80GB SSD)
+  - Debian 12
+  - Enough for 50-100 concurrent calls
+- **Floating IP**: $6/month (static IP for SIP)
+- **Bandwidth**: 4TB included (plenty for VoIP)
+- **Backups**: +$3.60/month (optional but recommended)
 
-### Option 2: Budget - $20-30/month
-**Provider:** Hetzner (Best value!)
-- **Specs:** 4GB RAM, 2 CPU, 80GB SSD
-- **Cost:** €4.51/month (~$5 USD) - CX21
-- **Capacity:** 20-30 simultaneous calls
-- **Best for:** Small carrier operations
+**Total with backups: $27.60/month**
 
-### Option 3: AWS Lightsail - $20/month
-- **Specs:** 4GB RAM, 2 CPU, 80GB SSD
-- **Cost:** $20/month
-- **Capacity:** 20-30 simultaneous calls
-- **Benefit:** Easy AWS integration
+### Option 2: Vultr (Slightly Cheaper)
+**$18/month total**
+- **Instance**: $18/month (4GB RAM, 2 vCPU, 80GB SSD)
+- **Static IP**: Included free
+- **Bandwidth**: 3TB included
+- **Snapshots**: $1/month per snapshot
 
-## Recommended: Hetzner Cloud (Cheapest!)
+**Total with 1 snapshot: $19/month**
 
-### Step 1: Create Hetzner Account
-1. Go to https://www.hetzner.com/cloud
-2. Sign up for account
-3. Add payment method
+### Option 3: Linode (Now Akamai)
+**$24/month total**
+- **Linode**: $24/month (4GB RAM, 2 vCPU, 80GB SSD)
+- **Static IP**: Included free
+- **Bandwidth**: 4TB included
+- **Backups**: +$5/month
 
-### Step 2: Create Server
+**Total with backups: $29/month**
+
+### Option 4: AWS Lightsail (AWS Ecosystem)
+**$20/month total**
+- **Instance**: $20/month (4GB RAM, 2 vCPU, 80GB SSD)
+- **Static IP**: Included free
+- **Bandwidth**: 4TB included
+- **Snapshots**: $0.05/GB/month (~$4/month for full backup)
+
+**Total with snapshots: $24/month**
+
+### Option 5: Hetzner (CHEAPEST - Europe)
+**€9.29/month (~$10 USD)**
+- **CX32**: €9.29/month (8GB RAM, 4 vCPU, 80GB SSD)
+- **Static IP**: Included free
+- **Bandwidth**: 20TB included
+- **Location**: Germany (higher latency to US)
+
+**Total: ~$10/month** ⚠️ But EU-based, may have latency issues
+
+---
+
+## 🏆 BEST CHOICE: Vultr or DigitalOcean
+
+### Why Vultr ($18/month):
+✅ Cheapest US-based option
+✅ Good network for VoIP
+✅ Simple setup
+✅ Free static IP
+✅ 3TB bandwidth (plenty)
+
+### Why DigitalOcean ($24/month):
+✅ Better documentation
+✅ Easier to use
+✅ Better support
+✅ More reliable
+✅ 4TB bandwidth
+
+---
+
+## 📊 What You Get for $18-24/month
+
+- **Concurrent Calls**: 50-100 simultaneous calls
+- **Extensions**: Unlimited (realistically 100-500)
+- **Storage**: 80GB (millions of CDR records)
+- **Uptime**: 99.99% SLA
+- **Bandwidth**: 3-4TB/month
+  - ~1GB per 1000 minutes of calls
+  - 3TB = ~3 million minutes/month
+- **Backups**: Automated snapshots
+- **Monitoring**: Built-in
+
+---
+
+## 🚀 Quick Setup on Vultr (15 minutes)
+
+### 1. Create Account
+- Go to vultr.com
+- Sign up (use promo code for $100 free credit)
+
+### 2. Deploy Server
+```
+Choose Server:
+- Cloud Compute - Shared CPU
+- Location: New York or Los Angeles (closest to you)
+- OS: Debian 12 x64
+- Plan: 4GB RAM / 2 CPU ($18/month)
+- Disable Auto Backups (use snapshots instead)
+- Add SSH Key (optional but recommended)
+```
+
+### 3. Get Your Server IP
+```
+Wait 2 minutes for deployment
+Note your IP address: xxx.xxx.xxx.xxx
+```
+
+### 4. SSH and Deploy
 ```bash
-# Server specs:
-- Location: Nuremberg, Germany (or closest to you)
-- Image: Ubuntu 22.04
-- Type: CX21 (2 vCPU, 4GB RAM) - €4.51/month
-- Volume: None needed initially
-- Network: Default
-- SSH Key: Add your public key
+# From your Mac
+ssh root@xxx.xxx.xxx.xxx
+
+# On the server
+apt update && apt install -y git
+git clone https://github.com/treez250/sidybytech_phone_system.git
+cd sidybytech_phone_system
+./setup-debian.sh
 ```
 
-### Step 3: Initial Server Setup
+### 5. Configure Firewall
 ```bash
-# SSH into your server
-ssh root@your-server-ip
-
-# Update system
-apt update && apt upgrade -y
-
-# Install Docker
-curl -fsSL https://get.docker.com -o get-docker.sh
-sh get-docker.sh
-
-# Install Docker Compose
-apt install docker-compose -y
-
-# Create swap (important for 4GB RAM)
-fallocate -l 4G /swapfile
-chmod 600 /swapfile
-mkswap /swapfile
-swapon /swapfile
-echo '/swapfile none swap sw 0 0' >> /etc/fstab
+# Vultr has a firewall in their control panel
+# Allow these ports:
+- 22 (SSH)
+- 80 (HTTP)
+- 443 (HTTPS)
+- 3000 (Grafana)
+- 5060-5061 (SIP)
+- 10000-20000 (RTP - voice)
 ```
 
-### Step 4: Deploy FreePBX
-```bash
-# Clone your repo
-git clone https://github.com/treez250/carrier-freepbx.git
-cd carrier-freepbx
-
-# Setup environment
-cp .env.example .env
-nano .env  # Change passwords and set EXTERNAL_IP
-
-# Get your public IP
-curl ifconfig.me
-
-# Update .env with your IP
-EXTERNAL_IP=your.server.ip
-SIP_DOMAIN=your.server.ip  # or domain if you have one
-
-# Start services
-docker-compose up -d
-
-# Wait 2-3 minutes for services to start
-docker-compose ps
-
-# Initialize database
-docker exec -i pbx-mariadb mysql -uroot -p${MYSQL_ROOT_PASSWORD} asterisk < database/schema.sql
-docker exec -i pbx-mariadb mysql -uroot -p${MYSQL_ROOT_PASSWORD} asterisk < database/seed.sql
+### 6. Point Your Domain
+```
+In your DNS (Cloudflare, etc):
+pbx.sidebytech.net → xxx.xxx.xxx.xxx
 ```
 
-### Step 5: Configure Firewall
-```bash
-# Install UFW
-apt install ufw -y
-
-# Allow SSH (IMPORTANT - do this first!)
-ufw allow 22/tcp
-
-# Allow SIP
-ufw allow 5060/udp
-ufw allow 5060/tcp
-ufw allow 5061/tcp
-
-# Allow RTP
-ufw allow 10000:10200/udp
-
-# Allow web interface (restrict to your IP for security)
-ufw allow 80/tcp
-ufw allow 443/tcp
-
-# Enable firewall
-ufw enable
+### 7. Done!
+```
+Access FreePBX: http://xxx.xxx.xxx.xxx
+Access Grafana: http://xxx.xxx.xxx.xxx:3000
 ```
 
-### Step 6: Access FreePBX
-```
-http://your-server-ip
-```
+---
 
-## Cost Breakdown (Monthly)
+## 💡 Cost Optimization Tips
 
-### Hetzner Setup (Recommended)
-- Server (CX21): €4.51 (~$5)
-- Bandwidth: Included (20TB)
-- **Total: ~$5/month**
+### Start Small, Scale Up
+- Start with $18/month Vultr
+- Monitor CPU/RAM usage
+- Upgrade only when needed
 
-### Additional Costs to Consider
-- Domain name: $10-15/year (~$1/month)
-- SSL certificate: FREE (Let's Encrypt)
-- DID numbers: $1-5/month per number
-- Upstream trunk: Pay-as-you-go (varies)
-- Backups: €3.20/month (optional)
+### Use Snapshots, Not Backups
+- Backups = automatic, expensive
+- Snapshots = manual, cheap ($1/month)
+- Take snapshot before changes
 
-### Total Minimum Cost: $6-10/month
+### Monitor Bandwidth
+- VoIP uses ~1MB per minute per call
+- 3TB = 3 million minutes
+- You'll likely use <100GB/month starting out
 
-## Cost Optimization Tips
+### Shut Down Dev/Test Instances
+- Only run production 24/7
+- Spin up test servers as needed
+- Delete when done
 
-### 1. Use Prepaid Billing
-- Charge customers upfront
-- Avoid credit risk
-- Better cash flow
+---
 
-### 2. Choose Cheap Upstream Carriers
-- VoIP.ms: $0.009/min USA
-- Twilio: $0.013/min USA
-- Bandwidth.com: $0.004/min USA (wholesale)
+## 📈 Scaling Costs
 
-### 3. Minimize DID Costs
-- Only buy DIDs you need
-- Use toll-free sparingly
-- Consider virtual numbers
+| Concurrent Calls | RAM Needed | Vultr Cost | DO Cost |
+|-----------------|------------|------------|---------|
+| 10-50           | 4GB        | $18/mo     | $24/mo  |
+| 50-100          | 4GB        | $18/mo     | $24/mo  |
+| 100-200         | 8GB        | $36/mo     | $48/mo  |
+| 200-500         | 16GB       | $72/mo     | $96/mo  |
+| 500-1000        | 32GB       | $144/mo    | $192/mo |
 
-### 4. Optimize Bandwidth
-- Use G.729 codec (saves 50% bandwidth vs ulaw)
-- Disable video if not needed
-- Use VAD (Voice Activity Detection)
+---
 
-### 5. Automate Everything
-- Automated billing (included)
-- Automated fraud detection (included)
-- Automated backups
+## 🔒 Security Considerations
 
-## Scaling Up Later
+### Included in Setup Script
+✅ Firewall (ufw)
+✅ Fail2ban (blocks brute force)
+✅ Strong passwords
+✅ Docker isolation
 
-When you grow:
-- **10-50 calls:** Upgrade to CX31 (€8.21/month)
-- **50-100 calls:** Upgrade to CX41 (€15.79/month)
-- **100+ calls:** Consider dedicated server
+### Additional (Recommended)
+- Change SSH port from 22
+- Use SSH keys only (disable password auth)
+- Enable 2FA on cloud provider
+- Set up monitoring alerts
 
-## Free Alternatives (Not Recommended for Production)
+---
 
-### Oracle Cloud Free Tier
-- 2 VMs with 1GB RAM each (too small)
-- Free forever
-- **Issue:** Not enough resources for carrier operations
+## 🎯 My Recommendation
 
-### AWS Free Tier
-- t2.micro (1GB RAM)
-- Free for 12 months only
-- **Issue:** Too small, not sustainable
+**Start with Vultr $18/month:**
 
-## Backup Strategy (Cheap)
+1. **Cheapest reliable option**
+2. **Free $100 credit** (5+ months free)
+3. **Easy to upgrade** when you grow
+4. **Good VoIP network**
+5. **Simple interface**
 
-### Option 1: Hetzner Backup
-- €3.20/month for automated backups
-- 7 backup slots
+**Total startup cost: $0 (with free credit)**
 
-### Option 2: Manual Backups
-```bash
-# Backup script (free)
-#!/bin/bash
-docker exec pbx-mariadb mysqldump -u root -p${MYSQL_ROOT_PASSWORD} asterisk > backup-$(date +%Y%m%d).sql
-# Upload to your own storage
-```
+After free credit runs out: **$18/month**
 
-### Option 3: Backblaze B2
-- $0.005/GB/month storage
-- First 10GB free
-- Very cheap for small databases
+---
 
-## Monitoring (Free)
+## 🆚 Comparison to Your Home Server
 
-All included in your setup:
-- Prometheus (free)
-- Grafana (free)
-- Built-in fraud detection
+| Feature | Home Server | Cloud ($18/mo) |
+|---------|-------------|----------------|
+| Cost | $0/month | $18/month |
+| Reliability | 95-98% | 99.99% |
+| Power outages | ❌ Affects you | ✅ No impact |
+| Internet outages | ❌ Affects you | ✅ No impact |
+| Bandwidth | Limited by ISP | 3TB included |
+| Static IP | Extra cost | Included |
+| Backups | Manual | Automated |
+| Scaling | Buy hardware | Click button |
+| Support | None | 24/7 |
 
-## Next Steps
+**For a carrier system, cloud is worth the $18/month for reliability alone.**
 
-1. Create Hetzner account
-2. Deploy server ($5/month)
-3. Configure FreePBX
-4. Get upstream trunk account
-5. Buy your first DID
-6. Add your first customer
-7. Start making money!
+---
 
-## Revenue Model
+## 🚀 Ready to Deploy?
 
-Example pricing:
-- Charge customers: $0.02/min
-- Your cost: $0.01/min
-- Profit: $0.01/min
+Let me know which provider you want to use and I'll walk you through it!
 
-With just 1000 minutes/month:
-- Revenue: $20
-- Cost: $10 (trunk) + $5 (server) = $15
-- Profit: $5
+**Recommended: Vultr $18/month**
+- Sign up: https://vultr.com
+- Use promo code for $100 free credit
+- Deploy in 15 minutes
 
-With 10,000 minutes/month:
-- Revenue: $200
-- Cost: $100 (trunk) + $5 (server) = $105
-- Profit: $95
-
-Scale from there!

@@ -1,0 +1,3 @@
+# Python dependencies for Snowflake sync
+snowflake-connector-python==3.6.0
+mysql-connector-python==8.2.0

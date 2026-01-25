@@ -12,7 +12,7 @@ apt install -y python3 python3-pip
 
 # Install required Python packages
 echo "📦 Installing Snowflake and MySQL connectors..."
-pip3 install -r /root/sidybytech_phone_system/scripts/requirements-snowflake.txt
+pip3 install --break-system-packages -r /root/sidybytech_phone_system/scripts/requirements-snowflake.txt
 
 echo ""
 echo "✅ Dependencies installed!"
