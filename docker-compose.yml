@@ -39,19 +39,14 @@ services:
       retries: 5
 
   # FreePBX/Asterisk
+  # CRITICAL: network_mode: host is REQUIRED for RTP and translation services
   freepbx:
     image: tiredofit/freepbx:latest
     container_name: pbx-freepbx
     restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-      - "5060:5060/udp"
-      - "5060:5060/tcp"
-      - "5061:5061/tcp"
-      - "10000-10200:10000-10200/udp"
+    network_mode: host
     environment:
-      - DB_HOST=mariadb
+      - DB_HOST=127.0.0.1
       - DB_PORT=3306
       - DB_NAME=asterisk
       - DB_USER=asteriskuser
@@ -59,19 +54,15 @@ services:
       - ENABLE_FAIL2BAN=TRUE
       - ENABLE_CRON=TRUE
       - RTP_START=10000
-      - RTP_FINISH=10200
+      - RTP_FINISH=20000
+      - TZ=America/New_York
+      - ASTERISK_UID=1000
+      - ASTERISK_GID=1000
     volumes:
       - freepbx-data:/data
-      - freepbx-logs:/var/log
+      - freepbx-logs:/var/log/asterisk
       - ./config/asterisk:/assets/custom
       - ./scripts:/usr/local/bin/custom
-    networks:
-      - pbx-network
-    depends_on:
-      mariadb:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     cap_add:
       - NET_ADMIN
 
