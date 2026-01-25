@@ -2,10 +2,12 @@ version: '3.8'
 
 services:
   # MariaDB Database
+  # Using host network so FreePBX can connect via 127.0.0.1
   mariadb:
     image: mariadb:10.11
     container_name: pbx-mariadb
     restart: unless-stopped
+    network_mode: host
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: asterisk
@@ -14,8 +16,6 @@ services:
     volumes:
       - mariadb-data:/var/lib/mysql
       - ./config/mysql/my.cnf:/etc/mysql/conf.d/custom.cnf
-    networks:
-      - pbx-network
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
