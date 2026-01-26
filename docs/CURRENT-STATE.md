@@ -6,8 +6,8 @@
 
 ## What's Running
 
-- **FreePBX 15.0.16.56** in Docker
-- **Asterisk 17.9.3**
+- **FreePBX 15.0.38** in Docker
+- **Asterisk 17** (underlying PBX engine)
 - **MariaDB 10.11** (embedded)
 - **Grafana** (monitoring)
 - **Prometheus** (metrics)

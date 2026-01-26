@@ -259,3 +259,338 @@ Our new Docker-based system avoids these issues by:
 - ✅ Database in separate container
 
 **Recovery time:** 10 minutes vs hours of debugging
+
+---
+
+## 🔥 INCIDENT REPORT #3
+### Docker Host Mode Network Catastrophe - Database Wipe
+
+**Incident Date:** January 25, 2026
+
+**System:**
+- FreePBX 15.0.38 in Docker
+- Asterisk 17
+- MariaDB 10.11 (separate container)
+- Docker Compose bridge network
+
+### Summary (Executive-Level)
+While troubleshooting audio issues (no RTP between extensions), the FreePBX container was switched from bridge network to `network_mode: host`. This broke database connectivity, causing FreePBX to perform a fresh install and wipe the asterisk database. All extensions (100, 102) were lost. The system was recovered by reverting to bridge network mode.
+
+### Timeline of Events
+
+**Initial Problem**
+- Extensions 100 and 102 registered successfully
+- Calls connected but NO AUDIO
+- Root cause identified: `direct_media=true` (should be false for Docker/NAT)
+
+**Troubleshooting Attempts**
+1. Changed `direct_media=false` in `/etc/asterisk/pjsip.endpoint.conf` ✅
+2. Changed external IPs in `/etc/asterisk/pjsip.transports.conf` ✅
+3. Restarted Asterisk - settings didn't persist ❌
+4. **CRITICAL ERROR:** Changed `docker-compose.yml` to use `network_mode: host` ❌❌❌
+
+**Immediate Effect**
+```yaml
+# BEFORE (working)
+freepbx:
+  networks:
+    - pbx-network
+  environment:
+    - DB_HOST=mariadb
+
+# AFTER (broken)
+freepbx:
+  network_mode: host
+  environment:
+    - DB_HOST=127.0.0.1  # MariaDB not on localhost!
+```
+
+**What Happened:**
+- FreePBX container switched to host network
+- MariaDB still on bridge network at `172.18.0.x`
+- FreePBX couldn't reach database at `127.0.0.1:3306`
+- FreePBX detected "no database" and started fresh install
+- Fresh install created empty asterisk database
+- All extensions, trunks, settings WIPED
+
+**Discovery:**
+```bash
+sudo ls -la /var/lib/docker/volumes/sidybytech_phone_system_mariadb-data/_data/asterisk/
+total 12
+drwx------ 2 lxd docker 4096 Jan 25 23:33 .
+drwxr-xr-x 6 lxd docker 4096 Jan 26 02:35 ..
+-rw-rw---- 1 lxd docker   67 Jan 25 23:33 db.opt
+```
+
+Only `db.opt` file exists - all tables gone.
+
+### Root Cause
+
+❌ **Critical Mistake:** Using `network_mode: host` for FreePBX while MariaDB on bridge network
+
+**Why This Failed:**
+1. `network_mode: host` removes container from Docker networks
+2. FreePBX can't reach MariaDB via service name or bridge IP
+3. `DB_HOST=127.0.0.1` points to host machine, not MariaDB container
+4. FreePBX sees "no database connection"
+5. FreePBX runs first-time setup wizard
+6. Setup wizard creates fresh empty database
+7. All existing data overwritten
+
+### The Real Audio Problem (Unrelated to Docker Networking)
+
+The audio issue was NOT a Docker networking problem. It was:
+
+**Root Cause of No Audio:**
+- Phone 100 on `192.168.2.2` (subnet A)
+- Phone 102 on `192.168.1.172` (subnet B)
+- Different subnets = RTP packets can't route
+- `direct_media=true` made phones try to connect directly
+- No route between subnets = no audio
+
+**Correct Fix:**
+- Move phone 100 to 192.168.1.x network (same subnet as phone 102)
+- OR configure routing between 192.168.1.x and 192.168.2.x
+- Keep `direct_media=false` in Asterisk
+- Keep Docker in bridge mode
+
+**Wrong Fix (What We Did):**
+- Changed Docker to host mode ❌
+- This doesn't help RTP routing between phones
+- This breaks database connectivity
+- This wipes the database
+
+### Why Recovery Failed Initially
+
+| Attempted Fix | Why It Failed |
+|--------------|---------------|
+| Restart containers | Database already wiped |
+| Check volumes | Volume exists but empty database |
+| Revert docker-compose | Too late - data already gone |
+| Look for backups | No backups, no snapshots |
+
+### Impact
+- All extensions lost (100, 102)
+- All PJSIP configurations lost
+- All custom Asterisk settings lost
+- System downtime: ~2 hours
+- Data loss: Complete (no backups)
+
+### Final Resolution
+
+✅ **Step 1:** Revert `docker-compose.yml` to bridge network
+```yaml
+freepbx:
+  networks:
+    - pbx-network
+  environment:
+    - DB_HOST=mariadb  # Service name, not localhost
+```
+
+✅ **Step 2:** Restart containers
+```bash
+sudo docker-compose down
+sudo docker-compose up -d
+```
+
+✅ **Step 3:** Recreate extensions from scratch
+- Extension 100 (Rob) - PJSIP, direct_media=no
+- Extension 102 (Droid) - PJSIP, direct_media=no
+
+✅ **Step 4:** Fix actual audio problem
+- Move phone 100 to 192.168.1.x network
+- Verify both phones on same subnet
+- Test audio
+
+### Key Technical Indicators
+
+**Sign you're about to break everything:**
+```yaml
+freepbx:
+  network_mode: host  # 🚨 DANGER
+  environment:
+    - DB_HOST=127.0.0.1  # 🚨 WRONG
+```
+
+**Correct configuration:**
+```yaml
+freepbx:
+  networks:
+    - pbx-network  # ✅ CORRECT
+  environment:
+    - DB_HOST=mariadb  # ✅ CORRECT (service name)
+```
+
+### Permanent Lessons Learned
+
+🔒 **NEVER use `network_mode: host` for FreePBX when database is in separate container**
+
+**Why:**
+- Breaks Docker service discovery
+- Breaks container networking
+- Requires manual IP management
+- No benefit for audio issues
+- High risk of data loss
+
+🔒 **Audio issues are NOT Docker networking issues**
+
+**Audio problems are caused by:**
+- Phone subnet mismatches
+- `direct_media=true` (should be false)
+- Firewall blocking RTP ports
+- NAT configuration issues
+
+**Audio problems are NOT caused by:**
+- Docker bridge vs host mode
+- Container networking
+- Docker Compose configuration
+
+🔒 **Always take snapshots before network changes**
+
+**Before changing docker-compose.yml:**
+```bash
+# Backup database
+docker exec pbx-mariadb mysqldump -u root -p asterisk > backup.sql
+
+# Or backup entire volumes
+docker-compose down
+tar -czf backup.tar.gz /var/lib/docker/volumes/sidybytech_phone_system_*
+docker-compose up -d
+```
+
+### Prevention Checklist
+
+#### Before ANY Docker network changes:
+- [ ] Snapshot VM (if virtualized)
+- [ ] Backup database: `mysqldump asterisk`
+- [ ] Backup Docker volumes
+- [ ] Document current working state
+- [ ] Test in dev environment first
+
+#### Never Do These:
+```yaml
+# NEVER DO THIS with external database
+freepbx:
+  network_mode: host
+  environment:
+    - DB_HOST=127.0.0.1
+```
+
+#### Always Do These:
+```yaml
+# ALWAYS DO THIS
+freepbx:
+  networks:
+    - pbx-network
+  environment:
+    - DB_HOST=mariadb  # Use service name
+```
+
+### Audio Troubleshooting Order (Correct)
+
+1. **Check phone network:** Same subnet?
+2. **Check Asterisk settings:** `direct_media=false`?
+3. **Check RTP ports:** 10000-10200 open?
+4. **Check NAT:** `force_rport=yes`, `rewrite_contact=yes`?
+5. **Check codecs:** Both phones using same codec?
+6. **NEVER:** Change Docker networking
+
+### This Build's New Approach
+
+To prevent this from happening again:
+
+✅ **Automated backups:**
+```bash
+# Add to cron
+0 2 * * * docker exec pbx-mariadb mysqldump -u root -p${MYSQL_ROOT_PASSWORD} asterisk > /backup/asterisk-$(date +\%Y\%m\%d).sql
+```
+
+✅ **Pre-change snapshots:**
+- Always backup before config changes
+- Test in dev environment
+- Document rollback procedure
+
+✅ **Network validation:**
+- Keep FreePBX on bridge network
+- Use service names for DB_HOST
+- Never use host mode with external database
+
+✅ **Audio troubleshooting:**
+- Check phone subnets FIRST
+- Fix network routing, not Docker
+- Keep Docker simple
+
+**Recovery time:** 10 minutes to fix Docker config, 5 minutes to recreate 2 extensions
+
+**Data loss:** Complete (no backups available)
+
+**Lesson:** Snapshots aren't optional. They're mandatory.
+
+---
+
+## Combined Lessons Learned (Updated)
+
+### 1️⃣ Snapshot BEFORE:
+- Module changes
+- Permission changes
+- fwconsole operations
+- **Docker network changes** ⭐ NEW
+- **ANY docker-compose.yml edits** ⭐ NEW
+
+### 2️⃣ Never uninstall:
+- framework
+- core
+- sip
+- settings
+- voicemail
+
+### 3️⃣ Never use host mode:
+- When database is in separate container
+- To "fix" audio issues
+- Without understanding the implications
+- Without backups
+
+### 4️⃣ Audio troubleshooting order:
+1. Check phone subnets (same network?)
+2. Check `direct_media=false`
+3. Check RTP ports open
+4. Check NAT settings
+5. NEVER change Docker networking
+
+### 5️⃣ If you see:
+```
+Class 'FreePBX' not found
+```
+➡️ **Stop immediately. Rebuild.**
+
+```yaml
+network_mode: host
+```
+➡️ **Stop immediately. Revert.**
+
+### 6️⃣ Backup strategy:
+- Daily database dumps
+- Weekly volume backups
+- Before ANY config changes
+- Test restore procedure
+
+---
+
+## Final Takeaway (Plain English)
+
+**What happened:**
+Tried to fix audio by changing Docker networking. Docker networking wasn't the problem. Change broke database connection. Database got wiped. Lost everything.
+
+**What we learned:**
+- Audio issues = phone network issues, not Docker issues
+- Host mode = dangerous with external database
+- Backups = not optional
+- Test changes in dev first
+
+**What's different now:**
+- Docker config locked down
+- Backup procedures in place
+- Audio troubleshooting checklist
+- Never touching network mode again
+
+This is the kind of mistake you only make once. Now we know better.
