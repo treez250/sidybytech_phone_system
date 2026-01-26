@@ -40,7 +40,7 @@ services:
 
   # FreePBX/Asterisk
   freepbx:
-    image: tiredofit/freepbx:latest
+    image: tiredofit/freepbx:17
     container_name: pbx-freepbx
     restart: unless-stopped
     ports:
