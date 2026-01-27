@@ -96,7 +96,8 @@ class GPUTranslationService:
         
         # Translation model
         model_name = f"Helsinki-NLP/opus-mt-{SOURCE_LANGUAGE}-{TARGET_LANGUAGE}"
-        self.translator = pipeline("translation", model=model_name, device=0 if device == "cuda" else -1)
+        task_name = f"translation_{SOURCE_LANGUAGE}_to_{TARGET_LANGUAGE}"
+        self.translator = pipeline(task_name, model=model_name, device=0 if device == "cuda" else -1)
         
         # TTS - using simple approach for now
         self.tts = pipeline("text-to-speech", model="facebook/fastspeech2-en-ljspeech", device=0 if device == "cuda" else -1)
