@@ -94,12 +94,12 @@ class GPUTranslationService:
         # Whisper for speech-to-text
         self.whisper_model = whisper.load_model("base", device=device)
         
-        # Translation model - use AutoModelForSeq2SeqLM directly
-        from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+        # Translation model - use MarianMT directly
+        from transformers import MarianMTModel, MarianTokenizer
         model_name = f"Helsinki-NLP/opus-mt-{SOURCE_LANGUAGE}-{TARGET_LANGUAGE}"
         logger.info(f"Loading translation model: {model_name}")
-        self.translation_tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.translation_model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+        self.translation_tokenizer = MarianTokenizer.from_pretrained(model_name)
+        self.translation_model = MarianMTModel.from_pretrained(model_name)
         if device == "cuda":
             self.translation_model = self.translation_model.to("cuda")
         
