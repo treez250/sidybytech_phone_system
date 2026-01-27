@@ -94,10 +94,14 @@ class GPUTranslationService:
         # Whisper for speech-to-text
         self.whisper_model = whisper.load_model("base", device=device)
         
-        # Translation model
+        # Translation model - use AutoModelForSeq2SeqLM directly
+        from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
         model_name = f"Helsinki-NLP/opus-mt-{SOURCE_LANGUAGE}-{TARGET_LANGUAGE}"
-        task_name = f"translation_{SOURCE_LANGUAGE}_to_{TARGET_LANGUAGE}"
-        self.translator = pipeline(task_name, model=model_name, device=0 if device == "cuda" else -1)
+        logger.info(f"Loading translation model: {model_name}")
+        self.translation_tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.translation_model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+        if device == "cuda":
+            self.translation_model = self.translation_model.to("cuda")
         
         # TTS - using simple approach for now
         self.tts = pipeline("text-to-speech", model="facebook/fastspeech2-en-ljspeech", device=0 if device == "cuda" else -1)
@@ -219,8 +223,13 @@ class GPUTranslationService:
                         logger.info(f"Recognized: {text}")
                         
                         if text.strip():
-                            # Translate
-                            translated = self.translator(text)[0]['translation_text']
+                            # Translate using model directly
+                            inputs = self.translation_tokenizer(text, return_tensors="pt", padding=True)
+                            if self.device == "cuda":
+                                inputs = {k: v.to("cuda") for k, v in inputs.items()}
+                            
+                            translated_ids = self.translation_model.generate(**inputs)
+                            translated = self.translation_tokenizer.batch_decode(translated_ids, skip_special_tokens=True)[0]
                             logger.info(f"Translated: {translated}")
                             
                             # Text-to-speech
