@@ -103,8 +103,8 @@ class GPUTranslationService:
         if device == "cuda":
             self.translation_model = self.translation_model.to("cuda")
         
-        # TTS - using simple approach for now
-        self.tts = pipeline("text-to-speech", model="facebook/fastspeech2-en-ljspeech", device=0 if device == "cuda" else -1)
+        # TTS - TODO: Add later
+        self.tts = None
         
         logger.info("Models loaded successfully")
     
