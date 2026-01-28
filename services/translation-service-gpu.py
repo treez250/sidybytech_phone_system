@@ -225,7 +225,8 @@ class GPUTranslationService:
                         if text.strip():
                             # Translate using model directly
                             inputs = self.translation_tokenizer(text, return_tensors="pt", padding=True)
-                            if self.device == "cuda":
+                            device = "cuda" if torch.cuda.is_available() else "cpu"
+                            if device == "cuda":
                                 inputs = {k: v.to("cuda") for k, v in inputs.items()}
                             
                             translated_ids = self.translation_model.generate(**inputs)
